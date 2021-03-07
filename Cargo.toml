@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["avpyatn2 <avpyatn2@mts.ru>"]
 edition = "2018"
 
+[lib]
+name = "wussup_lib"
+path = "src/lib.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0"
+config = "0.10"
+serde = { version = "1", features = ["derive"] }
