@@ -2,8 +2,22 @@ use config as config_lib;
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Config {
+    pub server: Server,
     #[serde(default = "default_logger")]
     pub logger: serde_yaml::Value,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Server {
+    pub port: u16,
+    pub env: Environment,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Environment {
+    Prod,
+    Dev,
 }
 
 fn default_logger() -> serde_yaml::Value {

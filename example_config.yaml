@@ -1,3 +1,6 @@
+server:
+  port: 8001
+  env: "dev" # "dev" | "prod"
 log:
   appenders:
     stdout:
