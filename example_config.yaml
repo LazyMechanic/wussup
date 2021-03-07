@@ -6,17 +6,22 @@ auth:
   secret: "secret"
   access_expires: 900 # 15 mins
   refresh_expires: 604800 # 7 days
-log:
+logger:
   appenders:
     stdout:
       kind: console
       encoder:
-        pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} {f}:{L} = {m} {n}"
+        pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} = {m} {n}"
   root:
     level: error
     appenders:
       - stdout
   loggers:
+    wussup:
+      level: debug
+      appenders:
+        - stdout
+      additive: false
     wussup_lib:
       level: debug
       appenders:

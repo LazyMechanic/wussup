@@ -8,6 +8,8 @@ pub async fn login(
     ctx: Context,
     req: requests::auth::Login,
 ) -> responses::Custom<impl warp::Reply> {
+    log::debug!("login, req={:?}", req);
+
     let (access_token, refresh_token) = ctx
         .auth_service
         .login(req.fingerprint, req.password)
@@ -25,6 +27,8 @@ pub async fn refresh_tokens(
     jwt: Jwt,
     req: requests::auth::RefreshTokens,
 ) -> responses::Custom<impl warp::Reply> {
+    log::debug!("refresh tokens, jwt={:?}, req={:?}", jwt, req);
+
     let (access_token, refresh_token) = ctx
         .auth_service
         .refresh_tokens(req.fingerprint, jwt)
@@ -55,6 +59,8 @@ fn reply_with_cookie(
 }
 
 pub async fn logout(ctx: Context, jwt: Jwt) -> responses::Empty {
+    log::debug!("logout, jwt={:?}", jwt);
+
     ctx.auth_service
         .logout(jwt)
         .await

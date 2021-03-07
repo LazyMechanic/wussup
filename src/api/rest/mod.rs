@@ -24,7 +24,7 @@ pub async fn run(ctx: Context, cfg: Config) {
         .allow_method("DELETE")
         .allow_method("OPTIONS")
         .build();
-    let log = warp::log(env!("CARGO_PKG_NAME"));
+    let log = warp::log("wussup::api");
     let routes = routes::routes(ctx)
         .recover(models::Error::unpack)
         .with(log)
