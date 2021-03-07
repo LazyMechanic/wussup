@@ -354,6 +354,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-api-problem"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d8a118014b18349bb3a25d7a45bd7449bbdc74dfd5ee6cc63ff85fffd608e88"
+dependencies = [
+ "http",
+ "serde 1.0.124",
+ "serde_json",
+ "warp",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1502,6 +1514,7 @@ dependencies = [
  "config",
  "futures",
  "http",
+ "http-api-problem",
  "log",
  "log4rs",
  "serde 1.0.124",

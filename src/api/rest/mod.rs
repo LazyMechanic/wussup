@@ -1,5 +1,8 @@
 pub mod handlers;
+pub mod models;
 pub mod prelude;
+pub mod requests;
+pub mod responses;
 pub mod routes;
 
 use std::net::{Ipv4Addr, SocketAddr};
@@ -21,7 +24,10 @@ pub async fn run(ctx: Context, cfg: Config) {
         .allow_method("OPTIONS")
         .build();
     let log = warp::log(env!("CARGO_PKG_NAME"));
-    let routes = routes::routes(ctx).with(log).with(cors);
+    let routes = routes::routes(ctx)
+        .recover(models::Error::unpack)
+        .with(log)
+        .with(cors);
 
     let addr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), cfg.server.port);
 
