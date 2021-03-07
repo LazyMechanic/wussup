@@ -1,6 +1,11 @@
 server:
   port: 8001
   env: "dev" # "dev" | "prod"
+auth:
+  password: "password"
+  secret: "secret"
+  access_expires: 900 # 15 mins
+  refresh_expires: 604800 # 7 days
 log:
   appenders:
     stdout:

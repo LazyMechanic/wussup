@@ -1,9 +1,10 @@
 pub mod handlers;
 pub mod models;
-pub mod prelude;
 pub mod requests;
 pub mod responses;
 pub mod routes;
+
+mod prelude;
 
 use std::net::{Ipv4Addr, SocketAddr};
 

@@ -3,6 +3,7 @@ use config as config_lib;
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Config {
     pub server: Server,
+    pub auth: Auth,
     #[serde(default = "default_logger")]
     pub logger: serde_yaml::Value,
 }
@@ -18,6 +19,14 @@ pub struct Server {
 pub enum Environment {
     Prod,
     Dev,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Auth {
+    pub password: String,
+    pub secret: String,
+    pub access_expires: i64,
+    pub refresh_expires: i64,
 }
 
 fn default_logger() -> serde_yaml::Value {
