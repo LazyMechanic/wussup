@@ -1,7 +1,31 @@
 use config as config_lib;
 
 #[derive(Debug, Clone, serde::Deserialize)]
-pub struct Config {}
+pub struct Config {
+    #[serde(default = "default_logger")]
+    pub logger: serde_yaml::Value,
+}
+
+fn default_logger() -> serde_yaml::Value {
+    const DEFAULT_LOG4RS_SETTINGS: &str = r##"
+    appenders:
+      stdout:
+        kind: console
+        encoder:
+          pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} {f}:{L} = {m} {n}"
+    root:
+      level: error
+      appenders:
+        - stdout
+    loggers:
+      wussup_lib:
+        level: info
+        appenders:
+          - stdout
+        additive: false
+    "##;
+    serde_yaml::from_str(DEFAULT_LOG4RS_SETTINGS).unwrap()
+}
 
 impl Config {
     #[allow(dead_code)]

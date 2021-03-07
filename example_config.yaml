@@ -1,0 +1,16 @@
+log:
+  appenders:
+    stdout:
+      kind: console
+      encoder:
+        pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} {f}:{L} = {m} {n}"
+  root:
+    level: error
+    appenders:
+      - stdout
+  loggers:
+    wussup_lib:
+      level: debug
+      appenders:
+        - stdout
+      additive: false
