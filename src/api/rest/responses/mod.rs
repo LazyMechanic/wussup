@@ -1,3 +1,5 @@
+pub mod auth;
+
 use crate::api::rest::prelude::*;
 
 // Use responses::Custom<impl warp::Reply> for universal response
