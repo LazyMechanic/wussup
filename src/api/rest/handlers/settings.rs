@@ -1,5 +1,4 @@
 use crate::api::rest::prelude::*;
-use crate::services::prelude::*;
 
 pub async fn get_settings(ctx: Context) -> responses::Json {
     let settings = ctx

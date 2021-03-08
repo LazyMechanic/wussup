@@ -8,11 +8,6 @@ pub use crate::repos::error::Error;
 use crate::config;
 use crate::repos::auth::AuthRepo;
 use crate::repos::settings::SettingsRepo;
-use crate::services::error::SettingsError;
-
-use sqlx::Acquire;
-use std::sync::Arc;
-use uuid::Uuid;
 
 pub type Db = sqlx::Postgres;
 pub type DbPool = sqlx::Pool<Db>;

@@ -95,7 +95,7 @@ impl<'a> SettingsRepo<'a> {
                 return Err(Error::from(err));
             }
         }
-        tx.commit();
+        tx.commit().await?;
         Ok(())
     }
 }

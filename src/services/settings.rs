@@ -26,7 +26,7 @@ impl SettingsService {
         Ok(rows)
     }
 
-    pub async fn update_settings(&self, settings: Vec<Settings>) -> Result<(), SettingsError> {
+    pub async fn update_settings(&self, _settings: Vec<Settings>) -> Result<(), SettingsError> {
         Ok(())
     }
 }

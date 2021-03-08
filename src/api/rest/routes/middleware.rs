@@ -1,9 +1,7 @@
 use crate::api::rest::prelude::*;
 use crate::services::prelude::*;
 
-use std::str::FromStr;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub fn with_context(
     ctx: Context,

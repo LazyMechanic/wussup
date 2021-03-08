@@ -1,8 +1,7 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{NaiveDateTime, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::config;
@@ -26,7 +25,7 @@ impl AuthService {
     }
 
     pub fn is_enable(&self) -> bool {
-        return self.cfg.enable;
+        self.cfg.enable
     }
 
     pub async fn authorize<S1, S2>(

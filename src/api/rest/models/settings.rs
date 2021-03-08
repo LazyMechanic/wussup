@@ -23,7 +23,7 @@ pub struct Build {
 impl From<Vec<models::settings::Settings>> for Settings {
     fn from(v: Vec<models::settings::Settings>) -> Self {
         let platforms = v.into_iter().fold(HashMap::new(), |mut platforms, set| {
-            let mut p = match platforms.get_mut(&set.platform) {
+            let p = match platforms.get_mut(&set.platform) {
                 None => {
                     platforms.insert(
                         set.platform.clone(),

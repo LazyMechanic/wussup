@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 #[derive(Debug)]
 pub struct Settings {
     pub platform: String,
