@@ -1,10 +1,10 @@
 -- +goose Up
 create table if not exists settings
 (
-    platform_id uuid not null
+    platform varchar(128) not null
         constraint settings_platforms__fk
             references platforms,
-    build_id uuid not null
+    build varchar(128) not null
         constraint settings_builds__fk
             references builds,
     released_ver varchar(64) not null,
