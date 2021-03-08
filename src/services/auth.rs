@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::config;
+use crate::models;
+use crate::repos::prelude::*;
 use crate::services::utils;
 
 use super::local_prelude::*;
@@ -15,44 +17,47 @@ pub const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
 
 pub struct AuthService {
     cfg: config::Auth,
-    clients: RwLock<HashMap<RefreshToken, Client>>,
+    db: DbPool,
 }
 
 impl AuthService {
-    pub fn new(cfg: config::Auth) -> AuthService {
-        AuthService {
-            cfg,
-            clients: Default::default(),
-        }
+    pub fn new(cfg: config::Auth, db: DbPool) -> AuthService {
+        AuthService { cfg, db }
     }
 
     pub fn is_enable(&self) -> bool {
         return self.cfg.enable;
     }
 
-    pub async fn authorize<S>(&self, token: S) -> Result<Claims, AuthError>
+    pub async fn authorize<S1, S2>(
+        &self,
+        access_token_encoded: S1,
+        refresh_token_encoded: S2,
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
     where
-        S: AsRef<str>,
+        S1: AsRef<str>,
+        S2: AsRef<[u8]>,
     {
-        // Decode token to claims
-        let claims: Claims =
-            decode_token(&self.cfg.secret, token).map_err(AuthError::TokenDecodeError)?;
+        let access_token_decoded =
+            AccessTokenDecoded::decode(&self.cfg.secret, access_token_encoded)?;
 
         // If access token expires
-        if Utc::now().timestamp() >= claims.exp {
+        if Utc::now().naive_utc() >= access_token_decoded.exp {
             return Err(AuthError::AuthorizationError(
                 "access token expires".to_string(),
             ));
         }
 
-        Ok(claims)
+        let refresh_token_decoded = RefreshTokenDecoded::decode(refresh_token_encoded)?;
+
+        Ok((access_token_decoded, refresh_token_decoded))
     }
 
     pub async fn login<S>(
         &self,
         fingerprint: S,
         password: ClientPassword,
-    ) -> Result<(AccessToken, RefreshTokenEntry), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
     where
         S: Into<String>,
     {
@@ -62,34 +67,37 @@ impl AuthService {
         }
 
         // Create new client
-        let client = Client::new(
-            fingerprint,
+        let client = models::auth::Client::new(
+            Uuid::new_v4(),
             utils::expires_timestamp(self.cfg.refresh_expires),
+            fingerprint,
+            Uuid::new_v4(),
         );
 
         // Create access token
-        let access_token = encode_token(
-            &self.cfg.secret,
-            &Claims::new(utils::expires_timestamp(self.cfg.access_expires), client.id),
-        )
-        .map_err(AuthError::TokenEncodeError)?;
+        let access_token = AccessTokenDecoded::new(
+            client.client_id,
+            self.cfg.secret.clone(),
+            utils::expires_timestamp(self.cfg.access_expires),
+        );
 
-        let refresh_token_entry = client.refresh_token_entry;
+        // Create refresh token
+        let refresh_token = RefreshTokenDecoded {
+            token: client.refresh_token,
+            exp: client.refresh_token_exp,
+        };
 
         // Save new auth session
-        self.clients
-            .write()
-            .await
-            .insert(refresh_token_entry.token, client);
+        self.db.auth_repo().add_client(client).await?;
 
-        Ok((access_token, refresh_token_entry))
+        Ok((access_token, refresh_token))
     }
 
     pub async fn refresh_tokens<S>(
         &self,
         fingerprint: S,
         jwt: Jwt,
-    ) -> Result<(AccessToken, RefreshTokenEntry), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
     where
         S: Into<String>,
     {
@@ -97,19 +105,13 @@ impl AuthService {
 
         // Remove client
         let old_client = self
-            .clients
-            .write()
-            .await
-            .remove(&jwt.refresh_token)
-            .ok_or_else(|| {
-                AuthError::RefreshTokensError(format!(
-                    "client not found, refresh_token={}",
-                    jwt.refresh_token
-                ))
-            })?;
+            .db
+            .auth_repo()
+            .remove_client(jwt.refresh_token.token)
+            .await?;
 
         // If refresh token expires
-        if Utc::now().timestamp() >= old_client.refresh_token_entry.exp {
+        if Utc::now().naive_utc() >= old_client.refresh_token_exp {
             return Err(AuthError::RefreshTokensError(
                 "refresh token expires".to_string(),
             ));
@@ -123,55 +125,52 @@ impl AuthService {
         }
 
         // Create new client
-        let new_client = Client {
-            id: old_client.id,
-            fingerprint: old_client.fingerprint,
-            refresh_token_entry: RefreshTokenEntry::new(utils::expires_timestamp(
-                self.cfg.refresh_expires,
-            )),
-        };
+        let new_client = models::auth::Client::new(
+            Uuid::new_v4(),
+            utils::expires_timestamp(self.cfg.refresh_expires),
+            fingerprint,
+            old_client.client_id,
+        );
 
         // Create new access token
-        let new_access_token = encode_token(
-            &self.cfg.secret,
-            &Claims::new(
-                utils::expires_timestamp(self.cfg.access_expires),
-                new_client.id,
-            ),
-        )
-        .map_err(AuthError::TokenEncodeError)?;
+        let new_access_token = AccessTokenDecoded::new(
+            new_client.client_id,
+            self.cfg.secret.clone(),
+            utils::expires_timestamp(self.cfg.access_expires),
+        );
 
-        let new_refresh_token = new_client.refresh_token_entry;
+        // Create new refresh token
+        let new_refresh_token = RefreshTokenDecoded {
+            token: new_client.refresh_token,
+            exp: new_client.refresh_token_exp,
+        };
 
         // Save new auth session
-        self.clients
-            .write()
-            .await
-            .insert(new_refresh_token.token, new_client);
+        self.db.auth_repo().add_client(new_client).await?;
 
         Ok((new_access_token, new_refresh_token))
     }
 
     pub async fn logout(&self, jwt: Jwt) -> Result<(), AuthError> {
-        let mut clients = self.clients.write().await;
-
         // Get client
-        let client = clients.get(&jwt.refresh_token).ok_or_else(|| {
-            AuthError::LogoutError(format!(
-                "client not found, refresh_token={}",
-                jwt.refresh_token
-            ))
-        })?;
+        let client = self
+            .db
+            .auth_repo()
+            .get_client(jwt.refresh_token.token)
+            .await?;
 
         // If clients not eq (from token and from db)
-        if client.id != jwt.claims.client_id {
+        if client.client_id != jwt.access_token.client_id {
             return Err(AuthError::LogoutError(
                 "client id in access token does not equal with client id in db".to_string(),
             ));
         }
 
         // Delete auth session
-        clients.remove(&jwt.refresh_token);
+        self.db
+            .auth_repo()
+            .remove_client(jwt.refresh_token.token)
+            .await?;
 
         Ok(())
     }
@@ -179,93 +178,119 @@ impl AuthService {
 
 pub type ClientId = Uuid;
 pub type ClientPassword = String;
-pub type AccessToken = String;
-pub type RefreshToken = Uuid;
-pub type WebSocketTicket = String;
 
-#[derive(Debug, Clone)]
-struct Client {
-    pub id: ClientId,
-    pub fingerprint: String,
-    pub refresh_token_entry: RefreshTokenEntry,
+pub type AccessTokenEncoded = String;
+pub type RefreshTokenEncoded = String;
+pub type RefreshToken = Uuid;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AccessTokenDecoded {
+    // seconds since the epoch
+    exp: NaiveDateTime,
+    client_id: ClientId,
+    #[serde(skip)]
+    secret: String,
 }
 
-impl Client {
-    pub fn new<S: Into<String>>(fingerprint: S, refresh_token_expires: i64) -> Client {
-        let id = Uuid::new_v4();
-        let fingerprint = fingerprint.into();
-        let refresh_token_entry = RefreshTokenEntry::new(refresh_token_expires);
+impl AccessTokenDecoded {
+    fn new<S>(client_id: ClientId, secret: S, exp: NaiveDateTime) -> AccessTokenDecoded
+    where
+        S: Into<String>,
+    {
+        AccessTokenDecoded {
+            exp,
+            client_id,
+            secret: secret.into(),
+        }
+    }
 
-        Client {
-            id,
-            fingerprint,
-            refresh_token_entry,
+    pub fn encode(&self) -> Result<AccessTokenEncoded, AuthError> {
+        let token = encode_token(&self.secret, self).map_err(AuthError::TokenEncodeError)?;
+        Ok(token)
+    }
+
+    pub fn decode<S1, S2>(secret: S1, token: S2) -> Result<AccessTokenDecoded, AuthError>
+    where
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+    {
+        let mut token_decoded: AccessTokenDecoded =
+            decode_token(secret.as_ref(), token).map_err(AuthError::TokenDecodeError)?;
+        token_decoded.secret = secret.as_ref().to_owned();
+        Ok(token_decoded)
+    }
+
+    pub fn exp(&self) -> NaiveDateTime {
+        self.exp
+    }
+
+    pub fn client_id(&self) -> ClientId {
+        self.client_id
+    }
+}
+
+impl Default for AccessTokenDecoded {
+    fn default() -> Self {
+        Self {
+            exp: Utc::now().naive_utc(),
+            client_id: Default::default(),
+            secret: "".to_string(),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct RefreshTokenEntry {
-    pub token: RefreshToken,
-    pub exp: i64,
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub struct RefreshTokenDecoded {
+    token: RefreshToken,
+    exp: NaiveDateTime,
 }
 
-impl RefreshTokenEntry {
-    pub fn new(exp: i64) -> RefreshTokenEntry {
-        RefreshTokenEntry {
+impl RefreshTokenDecoded {
+    pub fn new(exp: NaiveDateTime) -> RefreshTokenDecoded {
+        RefreshTokenDecoded {
             token: Uuid::new_v4(),
             exp,
         }
     }
-}
 
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct Claims {
-    // seconds since the epoch
-    exp: i64,
-    client_id: ClientId,
-}
-
-impl Claims {
-    fn new(exp: i64, client_id: ClientId) -> Self {
-        Self { exp, client_id }
+    pub fn encode(&self) -> Result<RefreshTokenEncoded, AuthError> {
+        let encoded_str = serde_json::to_string(self)?;
+        let encoded_b64 = base64::encode(encoded_str);
+        Ok(encoded_b64)
     }
 
-    pub fn client_id(&self) -> ClientId {
-        self.client_id
+    pub fn decode<T>(b64: T) -> Result<RefreshTokenDecoded, AuthError>
+    where
+        T: AsRef<[u8]>,
+    {
+        let decoded_b64 = base64::decode(b64)?;
+        let decoded_str = String::from_utf8(decoded_b64)?;
+        let refresh_token = serde_json::from_str(&decoded_str)?;
+        Ok(refresh_token)
+    }
+
+    pub fn token(&self) -> RefreshToken {
+        self.token
+    }
+
+    pub fn exp(&self) -> NaiveDateTime {
+        self.exp
     }
 }
 
-impl Default for Claims {
+impl Default for RefreshTokenDecoded {
     fn default() -> Self {
         Self {
-            exp: -1,
-            client_id: Default::default(),
+            token: Default::default(),
+            exp: Utc::now().naive_utc(),
         }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct WebSocketTicketEntry {
-    // seconds since the epoch
-    pub exp: i64,
-    pub client_id: ClientId,
-}
-
-impl WebSocketTicketEntry {
-    fn new(exp: i64, client_id: ClientId) -> Self {
-        Self { exp, client_id }
-    }
-
-    pub fn client_id(&self) -> ClientId {
-        self.client_id
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Jwt {
-    pub claims: Claims,
-    pub refresh_token: RefreshToken,
+    pub access_token: AccessTokenDecoded,
+    pub refresh_token: RefreshTokenDecoded,
 }
 
 fn encode_token<S, T>(secret: S, token_decoded: &T) -> Result<String, jsonwebtoken::errors::Error>
@@ -288,12 +313,12 @@ where
     S1: AsRef<str>,
     S2: AsRef<str>,
 {
-    let claims = jsonwebtoken::decode::<T>(
+    let access_token_decoded = jsonwebtoken::decode::<T>(
         token.as_ref().trim_start_matches(ACCESS_TOKEN_PREFIX),
         &DecodingKey::from_secret(secret.as_ref().as_bytes()),
         &Validation::default(),
     )
     .map(|token_data| token_data.claims)?;
 
-    Ok(claims)
+    Ok(access_token_decoded)
 }

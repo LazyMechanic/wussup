@@ -1,6 +1,6 @@
-use crate::models::build::Build;
+use crate::models::build::*;
 use crate::models::platform::*;
-use crate::models::settings::Settings;
+use crate::models::settings::*;
 use crate::repos::DbPool;
 use crate::repos::Error;
 

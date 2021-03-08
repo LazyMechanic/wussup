@@ -18,7 +18,7 @@ async fn auth(
 ) -> Result<Jwt, warp::reject::Rejection> {
     if !auth_service.is_enable() {
         return Ok(Jwt {
-            claims: Default::default(),
+            access_token: Default::default(),
             refresh_token: Default::default(),
         });
     }
@@ -30,6 +30,11 @@ async fn auth(
         )
     })?;
 
+    let cookie = cookie::Cookie::parse(cookie)
+        .map_err(models::Error::err_with_internal_error)?
+        .value()
+        .to_string();
+
     let header = header.ok_or_else(|| {
         models::Error::msg_with_status(
             http::StatusCode::UNAUTHORIZED,
@@ -37,21 +42,13 @@ async fn auth(
         )
     })?;
 
-    let claims = auth_service
-        .authorize(&header)
+    let (access_token, refresh_token) = auth_service
+        .authorize(&header, &cookie)
         .await
         .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
-    let refresh_token = Uuid::from_str(
-        &cookie::Cookie::parse(cookie)
-            .map_err(models::Error::err_with_internal_error)?
-            .value()
-            .to_string(),
-    )
-    .map_err(models::Error::err_with_internal_error)?;
-
     Result::<_, warp::reject::Rejection>::Ok(Jwt {
-        claims,
+        access_token,
         refresh_token,
     })
 }

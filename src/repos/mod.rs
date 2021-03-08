@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod error;
 pub mod prelude;
 pub mod settings;
@@ -5,6 +6,7 @@ pub mod settings;
 pub use crate::repos::error::Error;
 
 use crate::config;
+use crate::repos::auth::AuthRepo;
 use crate::repos::settings::SettingsRepo;
 use crate::services::error::SettingsError;
 
@@ -25,12 +27,26 @@ pub async fn connect(cfg: &config::Db) -> Result<DbPool, Error> {
     Ok(pool)
 }
 
-pub trait DbPoolExt {
-    fn settings_repo(&self) -> SettingsRepo;
-}
+macro_rules! ext_impl{
+    ($ext_type:ident, $(($repo_type:ty, $f:ident),)*) => {
+        pub trait $ext_type {
+            $(
+            fn $f(&self) -> $repo_type;
+            )*
+        }
 
-impl DbPoolExt for DbPool {
-    fn settings_repo(&self) -> SettingsRepo {
-        SettingsRepo::new(self)
+        impl $ext_type for DbPool {
+            $(
+            fn $f(&self) -> $repo_type {
+                <$repo_type>::new(self)
+            }
+            )*
+        }
     }
 }
+
+ext_impl!(
+    DbPoolExt,
+    (SettingsRepo, settings_repo),
+    (AuthRepo, auth_repo),
+);

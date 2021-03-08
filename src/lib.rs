@@ -17,7 +17,7 @@ use std::sync::Arc;
 pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let db = repos::connect(&cfg.db).await?;
     let ctx = Context {
-        auth_service: Arc::new((AuthService::new(cfg.auth.clone()))),
+        auth_service: Arc::new((AuthService::new(cfg.auth.clone(), db.clone()))),
         settings_service: Arc::new(SettingsService::new(db)),
     };
 

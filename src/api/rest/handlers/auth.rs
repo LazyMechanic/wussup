@@ -16,8 +16,12 @@ pub async fn login(
         .await
         .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
+    let access_token = access_token
+        .encode()
+        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+
     let reply = warp::reply::json(&responses::auth::Login { access_token });
-    let reply = reply_with_cookie(reply, refresh_token);
+    let reply = reply_with_cookie(reply, refresh_token)?;
 
     Ok(reply)
 }
@@ -35,27 +39,38 @@ pub async fn refresh_tokens(
         .await
         .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
+    let access_token = access_token
+        .encode()
+        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+
     let reply = warp::reply::json(&responses::auth::RefreshTokens { access_token });
-    let reply = reply_with_cookie(reply, refresh_token);
+    let reply = reply_with_cookie(reply, refresh_token)?;
 
     Ok(reply)
 }
 
 fn reply_with_cookie(
     reply: impl warp::Reply,
-    refresh_token: RefreshTokenEntry,
-) -> impl warp::Reply {
-    warp::reply::with_header(
+    refresh_token: RefreshTokenDecoded,
+) -> Result<impl warp::Reply, warp::reject::Rejection> {
+    let r = warp::reply::with_header(
         reply,
         http::header::SET_COOKIE,
-        cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token.token.to_string())
-            .http_only(true)
-            .max_age(Duration::seconds(
-                refresh_token.exp - Utc::now().timestamp(),
-            ))
-            .finish()
-            .to_string(),
-    )
+        cookie::Cookie::build(
+            REFRESH_TOKEN_COOKIE_NAME,
+            refresh_token.encode().map_err(|err| {
+                models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err)
+            })?,
+        )
+        .http_only(true)
+        .max_age(Duration::seconds(
+            refresh_token.exp().timestamp() - Utc::now().timestamp(),
+        ))
+        .finish()
+        .to_string(),
+    );
+
+    Ok(r)
 }
 
 pub async fn logout(ctx: Context, jwt: Jwt) -> responses::Empty {
