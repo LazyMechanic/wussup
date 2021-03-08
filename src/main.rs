@@ -1,10 +1,12 @@
-use wussup_lib::config::Config;
+mod cli;
 
-const DEFAULT_CONFIG_PATH: &str = "config.yaml";
+use crate::cli::Cli;
+use wussup_lib::config::Config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let cfg = Config::from_file(DEFAULT_CONFIG_PATH)?;
+    let cli = Cli::parse_args();
+    let cfg = Config::from_file(cli.config)?;
     init_logger(&cfg.logger)?;
 
     wussup_lib::run(cfg).await
