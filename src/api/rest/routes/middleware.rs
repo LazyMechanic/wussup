@@ -30,11 +30,6 @@ async fn auth(
         )
     })?;
 
-    let cookie = cookie::Cookie::parse(cookie)
-        .map_err(models::Error::err_with_internal_error)?
-        .value()
-        .to_string();
-
     let header = header.ok_or_else(|| {
         models::Error::msg_with_status(
             http::StatusCode::UNAUTHORIZED,

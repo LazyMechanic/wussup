@@ -185,7 +185,7 @@ pub type RefreshToken = Uuid;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AccessTokenDecoded {
-    // seconds since the epoch
+    #[serde(with = "naive_date_time_format")]
     exp: NaiveDateTime,
     client_id: ClientId,
     #[serde(skip)]
@@ -206,6 +206,8 @@ impl AccessTokenDecoded {
 
     pub fn encode(&self) -> Result<AccessTokenEncoded, AuthError> {
         let token = encode_token(&self.secret, self).map_err(AuthError::TokenEncodeError)?;
+
+        log::debug!("access token encode: {:?}", token);
         Ok(token)
     }
 
@@ -217,6 +219,8 @@ impl AccessTokenDecoded {
         let mut token_decoded: AccessTokenDecoded =
             decode_token(secret.as_ref(), token).map_err(AuthError::TokenDecodeError)?;
         token_decoded.secret = secret.as_ref().to_owned();
+
+        log::debug!("access token decode: {:?}", token_decoded);
         Ok(token_decoded)
     }
 
@@ -242,6 +246,7 @@ impl Default for AccessTokenDecoded {
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct RefreshTokenDecoded {
     token: RefreshToken,
+    #[serde(with = "naive_date_time_format")]
     exp: NaiveDateTime,
 }
 
@@ -255,7 +260,11 @@ impl RefreshTokenDecoded {
 
     pub fn encode(&self) -> Result<RefreshTokenEncoded, AuthError> {
         let encoded_str = serde_json::to_string(self)?;
-        let encoded_b64 = base64::encode(encoded_str);
+        log::debug!("refresh token encode (json): {:?}", encoded_str);
+
+        let encoded_b64 = base64::encode_config(encoded_str, base64::URL_SAFE_NO_PAD);
+        log::debug!("refresh token encode (base64): {:?}", encoded_b64);
+
         Ok(encoded_b64)
     }
 
@@ -263,9 +272,15 @@ impl RefreshTokenDecoded {
     where
         T: AsRef<[u8]>,
     {
-        let decoded_b64 = base64::decode(b64)?;
+        let decoded_b64 = base64::decode_config(b64, base64::URL_SAFE_NO_PAD)?;
+        log::debug!("refresh token decode (base64): {:?}", decoded_b64);
+
         let decoded_str = String::from_utf8(decoded_b64)?;
+        log::debug!("refresh token decode (json): {:?}", decoded_str);
+
         let refresh_token = serde_json::from_str(&decoded_str)?;
+        log::debug!("refresh token decode (obj): {:?}", refresh_token);
+
         Ok(refresh_token)
     }
 
@@ -321,4 +336,38 @@ where
     .map(|token_data| token_data.claims)?;
 
     Ok(access_token_decoded)
+}
+
+mod naive_date_time_format {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(date: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_i64(date.timestamp())
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let secs = i64::deserialize(deserializer)?;
+        Ok(NaiveDateTime::from_timestamp(secs, 0))
+    }
 }
