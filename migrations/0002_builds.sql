@@ -15,3 +15,6 @@ create unique index if not exists builds_name_uindex
 
 -- +goose Down
 drop table if exists builds;
+drop index if exists tokens_refresh_token_uindex;
+drop index if exists builds_id_uindex;
+drop index if exists builds_name_uindex;

@@ -15,3 +15,5 @@ create unique index if not exists platforms_name_uindex
 
 -- +goose Down
 drop table if exists platforms;
+drop index if exists platforms_id_uindex;
+drop index if exists platforms_name_uindex;
