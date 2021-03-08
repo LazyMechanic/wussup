@@ -1,5 +1,5 @@
 -- +goose Up
-create table settings
+create table if not exists settings
 (
     platform_id uuid not null
         constraint settings_platforms__fk
