@@ -1,6 +1,4 @@
-use crate::models::build::Build;
-use crate::models::platform::Platform;
-use crate::models::settings::Settings;
+use crate::models::settings::*;
 use crate::repos::prelude::*;
 use crate::services::local_prelude::*;
 
@@ -26,5 +24,9 @@ impl SettingsService {
     pub async fn get_settings(&self) -> Result<Vec<Settings>, SettingsError> {
         let rows = self.db.settings_repo().get_settings().await?;
         Ok(rows)
+    }
+
+    pub async fn update_settings(&self, settings: Vec<Settings>) -> Result<(), SettingsError> {
+        Ok(())
     }
 }

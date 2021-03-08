@@ -20,8 +20,8 @@ pub struct Build {
     pub link: String,
 }
 
-impl From<Vec<models::Settings>> for Settings {
-    fn from(v: Vec<models::Settings>) -> Self {
+impl From<Vec<models::settings::Settings>> for Settings {
+    fn from(v: Vec<models::settings::Settings>) -> Self {
         let platforms = v.into_iter().fold(HashMap::new(), |mut platforms, set| {
             let mut p = match platforms.get_mut(&set.platform) {
                 None => {
