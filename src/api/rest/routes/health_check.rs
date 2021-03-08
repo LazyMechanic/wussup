@@ -1,5 +1,9 @@
 use crate::api::rest::prelude::*;
 
+pub fn routes() -> BoxedFilter<(impl warp::Reply,)> {
+    health_check().boxed()
+}
+
 pub fn health_check() -> BoxedFilter<(impl warp::Reply,)> {
     warp::path!("health-check")
         .and(warp::get())

@@ -1,3 +1,5 @@
+pub mod settings;
+
 use http_api_problem::ApiError;
 use http_api_problem::HttpApiProblem;
 use http_api_problem::PROBLEM_JSON_MEDIA_TYPE;

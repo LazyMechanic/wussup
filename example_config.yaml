@@ -2,10 +2,14 @@ server:
   port: 8001
   env: "dev" # "dev" | "prod"
 auth:
+  enable: true
   password: "password"
   secret: "secret"
   access_expires: 900 # 15 mins
   refresh_expires: 604800 # 7 days
+db:
+  url: "postgres://postgres:password@localhost/test"
+  max_connections: 16
 logger:
   appenders:
     stdout:

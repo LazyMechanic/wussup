@@ -12,6 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 config = "0.10"
 cookie = "0.15"
@@ -22,6 +23,7 @@ log = { version = "0.4", features = ["std", "serde"] }
 log4rs = "1.0"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.8"
+sqlx = { version = "0.5", features = [ "macros", "runtime-tokio-native-tls", "postgres", "uuid" ] }
 time = "0.2"
 tokio = { version = "1", features = ["full"] }
 thiserror = "1.0"

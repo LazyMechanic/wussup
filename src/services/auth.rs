@@ -26,6 +26,10 @@ impl AuthService {
         }
     }
 
+    pub fn is_enable(&self) -> bool {
+        return self.cfg.enable;
+    }
+
     pub async fn authorize<S>(&self, token: S) -> Result<Claims, AuthError>
     where
         S: AsRef<str>,
@@ -229,6 +233,15 @@ impl Claims {
 
     pub fn client_id(&self) -> ClientId {
         self.client_id
+    }
+}
+
+impl Default for Claims {
+    fn default() -> Self {
+        Self {
+            exp: -1,
+            client_id: Default::default(),
+        }
     }
 }
 

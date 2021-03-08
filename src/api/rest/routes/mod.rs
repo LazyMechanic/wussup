@@ -1,16 +1,16 @@
 mod auth;
 mod health_check;
 mod middleware;
+mod settings;
 
 use crate::api::rest::prelude::*;
 
 pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
     base_path()
         .and(
-            health_check::health_check()
-                .or(auth::login(ctx.clone()))
-                .or(auth::logout(ctx.clone()))
-                .or(auth::refresh_tokens(ctx)),
+            health_check::routes()
+                .or(auth::routes(ctx.clone()))
+                .or(settings::routes(ctx)),
         )
         .boxed()
 }

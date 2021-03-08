@@ -1,3 +1,5 @@
+use crate::repos;
+
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
     #[error(transparent)]
@@ -12,4 +14,10 @@ pub enum AuthError {
     RefreshTokensError(String),
     #[error("logout error: {0}")]
     LogoutError(String),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum SettingsError {
+    #[error(transparent)]
+    RepoError(#[from] repos::Error),
 }
