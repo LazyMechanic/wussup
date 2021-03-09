@@ -82,6 +82,34 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
+    pub async fn delete_platform(&self, name: String) -> Result<Platform, Error> {
+        let row = sqlx::query_as!(
+            Platform,
+            r#"DELETE FROM platforms as p
+               WHERE p.name = $1
+               RETURNING name;"#,
+            name,
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    pub async fn delete_build(&self, name: String) -> Result<Build, Error> {
+        let row = sqlx::query_as!(
+            Build,
+            r#"DELETE FROM builds as b
+               WHERE b.name = $1
+               RETURNING name;"#,
+            name,
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     pub async fn full_update_settings(
         &self,
         settings: Vec<Settings>,

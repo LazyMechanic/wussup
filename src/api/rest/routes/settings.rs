@@ -7,6 +7,8 @@ pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .or(get_builds(ctx.clone()))
         .or(add_platform(ctx.clone()))
         .or(add_build(ctx.clone()))
+        .or(delete_platform(ctx.clone()))
+        .or(delete_build(ctx.clone()))
         .or(update_settings(ctx))
         .boxed()
 }
@@ -55,6 +57,24 @@ fn add_build(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(middleware::with_auth(ctx))
         .and(warp::body::json())
         .and_then(handlers::settings::add_build)
+        .boxed()
+}
+
+fn delete_platform(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
+    warp::path!("v1" / "settings" / "platforms" / String)
+        .and(warp::delete())
+        .and(middleware::with_context(ctx.clone()))
+        .and(middleware::with_auth(ctx))
+        .and_then(handlers::settings::delete_platform)
+        .boxed()
+}
+
+fn delete_build(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
+    warp::path!("v1" / "settings" / "builds" / String)
+        .and(warp::delete())
+        .and(middleware::with_context(ctx.clone()))
+        .and(middleware::with_auth(ctx))
+        .and_then(handlers::settings::delete_build)
         .boxed()
 }
 

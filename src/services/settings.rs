@@ -38,6 +38,18 @@ impl SettingsService {
         Ok(rows)
     }
 
+    pub async fn delete_platform(&self, name: String) -> Result<Vec<Platform>, SettingsError> {
+        self.db.settings_repo().delete_platform(name).await?;
+        let rows = self.db.settings_repo().get_platforms().await?;
+        Ok(rows)
+    }
+
+    pub async fn delete_build(&self, name: String) -> Result<Vec<Build>, SettingsError> {
+        self.db.settings_repo().delete_build(name).await?;
+        let rows = self.db.settings_repo().get_builds().await?;
+        Ok(rows)
+    }
+
     pub async fn update_settings(
         &self,
         settings: Vec<Settings>,

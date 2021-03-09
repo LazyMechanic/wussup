@@ -67,6 +67,30 @@ pub async fn add_build(ctx: Context, req: requests::settings::AddBuild) -> respo
     Ok(responses::settings::AddBuild::new(res).into_json())
 }
 
+pub async fn delete_platform(name: String, ctx: Context) -> responses::Json {
+    let platforms = ctx
+        .settings_service
+        .delete_platform(name)
+        .await
+        .map_err(api_models::Error::err_with_internal_error)?;
+
+    let res = platforms.into_iter().map(|p| p.name).collect();
+
+    Ok(responses::settings::DeletePlatform::new(res).into_json())
+}
+
+pub async fn delete_build(name: String, ctx: Context) -> responses::Json {
+    let builds = ctx
+        .settings_service
+        .delete_build(name)
+        .await
+        .map_err(api_models::Error::err_with_internal_error)?;
+
+    let res = builds.into_iter().map(|p| p.name).collect();
+
+    Ok(responses::settings::DeleteBuild::new(res).into_json())
+}
+
 pub async fn update_settings(
     ctx: Context,
     req: requests::settings::UpdateSettings,

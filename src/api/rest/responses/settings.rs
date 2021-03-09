@@ -67,3 +67,25 @@ impl AddBuild {
         AddBuild { builds }
     }
 }
+
+#[derive(Debug, serde::Serialize)]
+pub struct DeletePlatform {
+    pub platforms: Vec<String>,
+}
+
+impl DeletePlatform {
+    pub fn new(platforms: Vec<String>) -> Self {
+        Self { platforms }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DeleteBuild {
+    pub builds: Vec<String>,
+}
+
+impl DeleteBuild {
+    pub fn new(builds: Vec<String>) -> Self {
+        Self { builds }
+    }
+}
