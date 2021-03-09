@@ -1,5 +1,8 @@
+use uuid::Uuid;
+
 #[derive(Debug)]
 pub struct Settings {
+    pub id: Uuid,
     pub platform: String,
     pub build: String,
     pub released_ver: String,

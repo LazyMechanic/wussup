@@ -2,6 +2,8 @@ use crate::models::settings::*;
 use crate::repos::DbPool;
 use crate::repos::Error;
 
+use uuid::Uuid;
+
 pub struct SettingsRepo<'a> {
     pool: &'a DbPool,
 }
@@ -38,7 +40,8 @@ impl<'a> SettingsRepo<'a> {
     pub async fn get_settings(&self) -> Result<Vec<Settings>, Error> {
         let rows = sqlx::query_as!(
             Settings,
-            r#"SELECT s.platform
+            r#"SELECT s.id
+                    , s.platform
                     , s.build
                     , s.released_ver
                     , s.testing_ver
@@ -59,20 +62,23 @@ impl<'a> SettingsRepo<'a> {
         Ok(())
     }
 
-    pub async fn full_update_settings(&self, settings: Vec<Settings>) -> Result<(), Error> {
+    pub async fn full_update_settings(
+        &self,
+        settings: Vec<Settings>,
+    ) -> Result<Vec<Settings>, Error> {
         let mut tx = self.pool.begin().await?;
 
-        if let Err(err) = sqlx::query!(r#"DELETE FROM settings as s;"#)
+        sqlx::query!(r#"DELETE FROM settings as s;"#)
             .execute(&mut tx)
-            .await
-        {
-            tx.rollback().await?;
-            return Err(Error::from(err));
-        }
+            .await?;
+
+        let mut rows = Vec::with_capacity(settings.capacity());
 
         for s in settings.into_iter() {
-            if let Err(err) = sqlx::query!(
-                r#"INSERT INTO settings ( platform
+            let row = sqlx::query_as!(
+                Settings,
+                r#"INSERT INTO settings ( id
+                                        , platform
                                         , build
                                         , released_ver
                                         , testing_ver
@@ -81,21 +87,28 @@ impl<'a> SettingsRepo<'a> {
                           , $2 
                           , $3 
                           , $4 
-                          , $5 );"#,
+                          , $5 
+                          , $6 )
+                   RETURNING id
+                           , platform
+                           , build
+                           , released_ver
+                           , testing_ver
+                           , file_path;"#,
+                Uuid::new_v4(),
                 s.platform,
                 s.build,
                 s.released_ver,
                 s.testing_ver,
                 s.file_path,
             )
-            .execute(&mut tx)
-            .await
-            {
-                tx.rollback().await?;
-                return Err(Error::from(err));
-            }
+            .fetch_one(&mut tx)
+            .await?;
+
+            rows.push(row);
         }
+
         tx.commit().await?;
-        Ok(())
+        Ok(rows)
     }
 }
