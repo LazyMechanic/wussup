@@ -26,7 +26,27 @@ impl SettingsService {
         Ok(rows)
     }
 
-    pub async fn update_settings(&self, _settings: Vec<Settings>) -> Result<(), SettingsError> {
-        Ok(())
+    pub async fn add_platform(&self, platform: Platform) -> Result<Vec<Platform>, SettingsError> {
+        self.db.settings_repo().add_platform(platform).await?;
+        let rows = self.db.settings_repo().get_platforms().await?;
+        Ok(rows)
+    }
+
+    pub async fn add_build(&self, build: Build) -> Result<Vec<Build>, SettingsError> {
+        self.db.settings_repo().add_build(build).await?;
+        let rows = self.db.settings_repo().get_builds().await?;
+        Ok(rows)
+    }
+
+    pub async fn update_settings(
+        &self,
+        settings: Vec<Settings>,
+    ) -> Result<Vec<Settings>, SettingsError> {
+        let rows = self
+            .db
+            .settings_repo()
+            .full_update_settings(settings)
+            .await?;
+        Ok(rows)
     }
 }

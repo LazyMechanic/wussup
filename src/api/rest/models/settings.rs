@@ -51,3 +51,24 @@ impl From<Vec<models::settings::Settings>> for Settings {
         Settings { platforms }
     }
 }
+
+impl From<Settings> for Vec<models::settings::Settings> {
+    fn from(s: Settings) -> Vec<models::settings::Settings> {
+        let mut res = Vec::new();
+
+        for (pk, p) in s.platforms.iter() {
+            for (bk, b) in p.builds.iter() {
+                res.push(models::settings::Settings {
+                    id: Default::default(),
+                    platform: pk.clone(),
+                    build: bk.clone(),
+                    released_ver: b.released.clone(),
+                    testing_ver: b.testing.clone(),
+                    file_path: b.link.clone(),
+                })
+            }
+        }
+
+        res
+    }
+}

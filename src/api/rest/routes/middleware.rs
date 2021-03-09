@@ -22,14 +22,14 @@ async fn auth(
     }
 
     let cookie = cookie.ok_or_else(|| {
-        models::Error::msg_with_status(
+        api_models::Error::msg_with_status(
             http::StatusCode::UNAUTHORIZED,
             format!("cookie not found, name={}", REFRESH_TOKEN_COOKIE_NAME),
         )
     })?;
 
     let header = header.ok_or_else(|| {
-        models::Error::msg_with_status(
+        api_models::Error::msg_with_status(
             http::StatusCode::UNAUTHORIZED,
             "header Authorization not found",
         )
@@ -38,7 +38,7 @@ async fn auth(
     let (access_token, refresh_token) = auth_service
         .authorize(&header, &cookie)
         .await
-        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+        .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
     Result::<_, warp::reject::Rejection>::Ok(Jwt {
         access_token,

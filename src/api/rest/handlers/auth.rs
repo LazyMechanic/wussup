@@ -14,11 +14,11 @@ pub async fn login(
         .auth_service
         .login(req.fingerprint, req.password)
         .await
-        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+        .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
     let access_token = access_token
         .encode()
-        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+        .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
     let reply = warp::reply::json(&responses::auth::Login { access_token });
     let reply = reply_with_cookie(reply, refresh_token)?;
@@ -37,11 +37,11 @@ pub async fn refresh_tokens(
         .auth_service
         .refresh_tokens(req.fingerprint, jwt)
         .await
-        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+        .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
     let access_token = access_token
         .encode()
-        .map_err(|err| models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
+        .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
     let reply = warp::reply::json(&responses::auth::RefreshTokens { access_token });
     let reply = reply_with_cookie(reply, refresh_token)?;
@@ -59,7 +59,7 @@ fn reply_with_cookie(
         cookie::Cookie::build(
             REFRESH_TOKEN_COOKIE_NAME,
             refresh_token.encode().map_err(|err| {
-                models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err)
+                api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err)
             })?,
         )
         .http_only(true)
@@ -79,7 +79,7 @@ pub async fn logout(ctx: Context, jwt: Jwt) -> responses::Empty {
     ctx.auth_service
         .logout(jwt)
         .await
-        .map_err(models::Error::err_with_internal_error)?;
+        .map_err(api_models::Error::err_with_internal_error)?;
 
-    Ok(models::Nothing::new())
+    Ok(api_models::Nothing::new())
 }

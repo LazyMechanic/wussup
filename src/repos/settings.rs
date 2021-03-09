@@ -54,12 +54,32 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn remove_settings(&self) -> Result<(), Error> {
-        sqlx::query_as!(Settings, r#"DELETE FROM settings as s;"#)
-            .execute(self.pool)
-            .await?;
+    pub async fn add_platform(&self, p: Platform) -> Result<Platform, Error> {
+        let row = sqlx::query_as!(
+            Platform,
+            r#"INSERT INTO platforms ( name )
+               VALUES ( $1 )
+               RETURNING name;"#,
+            p.name,
+        )
+        .fetch_one(self.pool)
+        .await?;
 
-        Ok(())
+        Ok(row)
+    }
+
+    pub async fn add_build(&self, p: Build) -> Result<Build, Error> {
+        let row = sqlx::query_as!(
+            Build,
+            r#"INSERT INTO builds ( name )
+               VALUES ( $1 )
+               RETURNING name;"#,
+            p.name,
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row)
     }
 
     pub async fn full_update_settings(

@@ -14,10 +14,10 @@ use prelude::*;
 pub async fn run(ctx: Context, cfg: Config) {
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_header("Content-Type")
-        .allow_header("Authorization")
-        .allow_header("Content-Length")
-        .allow_header("Content-Disposition")
+        //.allow_header("Content-Type")
+        //.allow_header("Authorization")
+        //.allow_header("Content-Length")
+        //.allow_header("Content-Disposition")
         .allow_method("GET")
         .allow_method("PUT")
         .allow_method("POST")
@@ -26,9 +26,9 @@ pub async fn run(ctx: Context, cfg: Config) {
         .build();
     let log = warp::log("wussup::api");
     let routes = routes::routes(ctx)
-        .recover(models::Error::unpack)
         .with(log)
-        .with(cors);
+        .with(cors)
+        .recover(models::Error::unpack);
 
     let addr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), cfg.server.port);
 

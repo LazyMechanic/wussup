@@ -5,7 +5,7 @@ use crate::api::rest::prelude::*;
 
 // Use responses::Custom<impl warp::Reply> for universal response
 pub type Custom<T> = Result<T, warp::reject::Rejection>;
-pub type Empty = Custom<models::Nothing>;
+pub type Empty = Custom<api_models::Nothing>;
 pub type Json = Custom<warp::reply::Json>;
 
 pub trait EmptyExt {
@@ -15,7 +15,7 @@ pub trait EmptyExt {
 
 impl EmptyExt for Empty {
     fn ok() -> Empty {
-        Ok(models::Nothing::new())
+        Ok(api_models::Nothing::new())
     }
 
     fn err(e: warp::reject::Rejection) -> Empty {

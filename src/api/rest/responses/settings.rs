@@ -33,3 +33,37 @@ impl GetBuilds {
         GetBuilds { builds: b }
     }
 }
+
+#[derive(Debug, serde::Serialize)]
+pub struct UpdateSettings {
+    #[serde(flatten)]
+    pub payload: Settings,
+}
+
+impl UpdateSettings {
+    pub fn new(s: Settings) -> UpdateSettings {
+        UpdateSettings { payload: s }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct AddPlatform {
+    pub platforms: Vec<String>,
+}
+
+impl AddPlatform {
+    pub fn new(platforms: Vec<String>) -> AddPlatform {
+        AddPlatform { platforms }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct AddBuild {
+    pub builds: Vec<String>,
+}
+
+impl AddBuild {
+    pub fn new(builds: Vec<String>) -> AddBuild {
+        AddBuild { builds }
+    }
+}
