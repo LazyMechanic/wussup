@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod file;
 pub mod settings;
 
 use crate::api::rest::prelude::*;

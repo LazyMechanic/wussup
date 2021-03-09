@@ -5,4 +5,5 @@ use std::sync::Arc;
 pub struct Context {
     pub auth_service: Arc<AuthService>,
     pub settings_service: Arc<SettingsService>,
+    pub file_service: Arc<FileService>,
 }

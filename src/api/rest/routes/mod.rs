@@ -1,4 +1,5 @@
 mod auth;
+mod file;
 mod health_check;
 mod middleware;
 mod settings;
@@ -10,7 +11,8 @@ pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(
             health_check::routes()
                 .or(auth::routes(ctx.clone()))
-                .or(settings::routes(ctx)),
+                .or(settings::routes(ctx.clone()))
+                .or(file::routes(ctx)),
         )
         .boxed()
 }

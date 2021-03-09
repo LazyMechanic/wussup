@@ -1,3 +1,4 @@
+pub mod file;
 pub mod settings;
 
 use http_api_problem::ApiError;
