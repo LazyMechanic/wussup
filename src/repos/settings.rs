@@ -1,6 +1,6 @@
 use crate::models::settings::*;
 use crate::repos::DbPool;
-use crate::repos::Error;
+use crate::repos::RepoError;
 
 use uuid::Uuid;
 
@@ -13,7 +13,7 @@ impl<'a> SettingsRepo<'a> {
         SettingsRepo { pool }
     }
 
-    pub async fn get_platforms(&self) -> Result<Vec<Platform>, Error> {
+    pub async fn get_platforms(&self) -> Result<Vec<Platform>, RepoError> {
         let rows = sqlx::query_as!(
             Platform,
             r#"SELECT p.name
@@ -25,7 +25,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn get_builds(&self) -> Result<Vec<Build>, Error> {
+    pub async fn get_builds(&self) -> Result<Vec<Build>, RepoError> {
         let rows = sqlx::query_as!(
             Build,
             r#"SELECT b.name
@@ -37,7 +37,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn get_settings(&self) -> Result<Vec<Settings>, Error> {
+    pub async fn get_settings(&self) -> Result<Vec<Settings>, RepoError> {
         let rows = sqlx::query_as!(
             Settings,
             r#"SELECT s.id
@@ -54,7 +54,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn add_platform(&self, p: Platform) -> Result<Platform, Error> {
+    pub async fn add_platform(&self, p: Platform) -> Result<Platform, RepoError> {
         let row = sqlx::query_as!(
             Platform,
             r#"INSERT INTO platforms ( name )
@@ -68,7 +68,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn add_build(&self, p: Build) -> Result<Build, Error> {
+    pub async fn add_build(&self, p: Build) -> Result<Build, RepoError> {
         let row = sqlx::query_as!(
             Build,
             r#"INSERT INTO builds ( name )
@@ -82,7 +82,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn delete_platform(&self, name: String) -> Result<Platform, Error> {
+    pub async fn delete_platform(&self, name: String) -> Result<Platform, RepoError> {
         let row = sqlx::query_as!(
             Platform,
             r#"DELETE FROM platforms as p
@@ -96,7 +96,7 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn delete_build(&self, name: String) -> Result<Build, Error> {
+    pub async fn delete_build(&self, name: String) -> Result<Build, RepoError> {
         let row = sqlx::query_as!(
             Build,
             r#"DELETE FROM builds as b
@@ -113,7 +113,7 @@ impl<'a> SettingsRepo<'a> {
     pub async fn full_update_settings(
         &self,
         settings: Vec<Settings>,
-    ) -> Result<Vec<Settings>, Error> {
+    ) -> Result<Vec<Settings>, RepoError> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(r#"DELETE FROM settings as s;"#)

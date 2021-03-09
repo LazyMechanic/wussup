@@ -1,5 +1,5 @@
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum RepoError {
     #[error(transparent)]
     SqlxError(#[from] sqlx::Error),
 }

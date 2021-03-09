@@ -1,6 +1,6 @@
 use crate::models::auth::*;
 use crate::repos::DbPool;
-use crate::repos::Error;
+use crate::repos::RepoError;
 use uuid::Uuid;
 
 pub struct AuthRepo<'a> {
@@ -12,7 +12,7 @@ impl<'a> AuthRepo<'a> {
         AuthRepo { pool }
     }
 
-    pub async fn add_client(&self, client: Client) -> Result<(), Error> {
+    pub async fn add_client(&self, client: Client) -> Result<(), RepoError> {
         sqlx::query_as!(
             Client,
             r#"INSERT INTO sessions ( refresh_token
@@ -34,7 +34,7 @@ impl<'a> AuthRepo<'a> {
         Ok(())
     }
 
-    pub async fn remove_client(&self, refresh_token: Uuid) -> Result<Client, Error> {
+    pub async fn remove_client(&self, refresh_token: Uuid) -> Result<Client, RepoError> {
         let row = sqlx::query_as!(
             Client,
             r#"DELETE FROM sessions as s
@@ -51,7 +51,7 @@ impl<'a> AuthRepo<'a> {
         Ok(row)
     }
 
-    pub async fn get_client(&self, refresh_token: Uuid) -> Result<Client, Error> {
+    pub async fn get_client(&self, refresh_token: Uuid) -> Result<Client, RepoError> {
         let row = sqlx::query_as!(
             Client,
             r#"SELECT s.refresh_token

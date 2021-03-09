@@ -32,7 +32,7 @@ impl AuthService {
         &self,
         access_token_encoded: S1,
         refresh_token_encoded: S2,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
         S1: AsRef<str>,
         S2: AsRef<[u8]>,
@@ -42,9 +42,9 @@ impl AuthService {
 
         // If access token expires
         if Utc::now().naive_utc() >= access_token_decoded.exp {
-            return Err(AuthError::AuthorizationError(
-                "access token expires".to_string(),
-            ));
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "access token expires"
+            )));
         }
 
         let refresh_token_decoded = RefreshTokenDecoded::decode(refresh_token_encoded)?;
@@ -56,13 +56,13 @@ impl AuthService {
         &self,
         fingerprint: S,
         password: ClientPassword,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
         S: Into<String>,
     {
         // Compare a password with the master password from the config
         if password != self.cfg.password {
-            return Err(AuthError::LoginError("wrong password".to_owned()));
+            return Err(ServiceError::AuthError(anyhow::anyhow!("wrong password")));
         }
 
         // Create new client
@@ -96,7 +96,7 @@ impl AuthService {
         &self,
         fingerprint: S,
         jwt: Jwt,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
         S: Into<String>,
     {
@@ -111,16 +111,16 @@ impl AuthService {
 
         // If refresh token expires
         if Utc::now().naive_utc() >= old_client.refresh_token_exp {
-            return Err(AuthError::RefreshTokensError(
-                "refresh token expires".to_string(),
-            ));
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "refresh token expires"
+            )));
         }
 
         // If old fingerprint and new are not equal
         if old_client.fingerprint != fingerprint {
-            return Err(AuthError::RefreshTokensError(
-                "fingerprints not equal".to_string(),
-            ));
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "fingerprints not equal"
+            )));
         }
 
         // Create new client
@@ -150,7 +150,7 @@ impl AuthService {
         Ok((new_access_token, new_refresh_token))
     }
 
-    pub async fn logout(&self, jwt: Jwt) -> Result<(), AuthError> {
+    pub async fn logout(&self, jwt: Jwt) -> Result<(), ServiceError> {
         // Get client
         let client = self
             .db
@@ -160,9 +160,9 @@ impl AuthService {
 
         // If clients not eq (from token and from db)
         if client.client_id != jwt.access_token.client_id {
-            return Err(AuthError::LogoutError(
-                "client id in access token does not equal with client id in db".to_string(),
-            ));
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "client id in access token does not equal with client id in db"
+            )));
         }
 
         // Delete auth session
@@ -203,20 +203,21 @@ impl AccessTokenDecoded {
         }
     }
 
-    pub fn encode(&self) -> Result<AccessTokenEncoded, AuthError> {
-        let token = encode_token(&self.secret, self).map_err(AuthError::TokenEncodeError)?;
+    pub fn encode(&self) -> Result<AccessTokenEncoded, ServiceError> {
+        let token =
+            encode_token(&self.secret, self).map_err(|err| ServiceError::AuthError(err.into()))?;
 
         log::debug!("access token encode: {:?}", token);
         Ok(token)
     }
 
-    pub fn decode<S1, S2>(secret: S1, token: S2) -> Result<AccessTokenDecoded, AuthError>
+    pub fn decode<S1, S2>(secret: S1, token: S2) -> Result<AccessTokenDecoded, ServiceError>
     where
         S1: AsRef<str>,
         S2: AsRef<str>,
     {
-        let mut token_decoded: AccessTokenDecoded =
-            decode_token(secret.as_ref(), token).map_err(AuthError::TokenDecodeError)?;
+        let mut token_decoded: AccessTokenDecoded = decode_token(secret.as_ref(), token)
+            .map_err(|err| ServiceError::AuthError(err.into()))?;
         token_decoded.secret = secret.as_ref().to_owned();
 
         log::debug!("access token decode: {:?}", token_decoded);
@@ -257,8 +258,9 @@ impl RefreshTokenDecoded {
         }
     }
 
-    pub fn encode(&self) -> Result<RefreshTokenEncoded, AuthError> {
-        let encoded_str = serde_json::to_string(self)?;
+    pub fn encode(&self) -> Result<RefreshTokenEncoded, ServiceError> {
+        let encoded_str =
+            serde_json::to_string(self).map_err(|err| ServiceError::CommonError(err.into()))?;
         log::debug!("refresh token encode (json): {:?}", encoded_str);
 
         let encoded_b64 = base64::encode_config(encoded_str, base64::URL_SAFE_NO_PAD);
@@ -267,17 +269,20 @@ impl RefreshTokenDecoded {
         Ok(encoded_b64)
     }
 
-    pub fn decode<T>(b64: T) -> Result<RefreshTokenDecoded, AuthError>
+    pub fn decode<T>(b64: T) -> Result<RefreshTokenDecoded, ServiceError>
     where
         T: AsRef<[u8]>,
     {
-        let decoded_b64 = base64::decode_config(b64, base64::URL_SAFE_NO_PAD)?;
+        let decoded_b64 = base64::decode_config(b64, base64::URL_SAFE_NO_PAD)
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
         log::debug!("refresh token decode (base64): {:?}", decoded_b64);
 
-        let decoded_str = String::from_utf8(decoded_b64)?;
+        let decoded_str =
+            String::from_utf8(decoded_b64).map_err(|err| ServiceError::CommonError(err.into()))?;
         log::debug!("refresh token decode (json): {:?}", decoded_str);
 
-        let refresh_token = serde_json::from_str(&decoded_str)?;
+        let refresh_token = serde_json::from_str(&decoded_str)
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
         log::debug!("refresh token decode (obj): {:?}", refresh_token);
 
         Ok(refresh_token)
