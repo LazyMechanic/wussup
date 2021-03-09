@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod error;
+pub mod file;
 pub mod prelude;
 pub mod settings;
 
@@ -45,4 +46,5 @@ ext_impl!(
     DbPoolExt,
     (SettingsRepo, settings_repo),
     (AuthRepo, auth_repo),
+    (FileRepo, file_repo),
 );
