@@ -10,6 +10,8 @@ auth:
 db:
   url: "postgres://postgres:password@localhost/test"
   max_connections: 16
+file:
+  base_path: "/tmp"
 logger:
   appenders:
     stdout:

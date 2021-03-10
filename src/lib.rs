@@ -19,7 +19,7 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let ctx = Context {
         auth_service: Arc::new(AuthService::new(cfg.auth.clone(), db.clone())),
         settings_service: Arc::new(SettingsService::new(db.clone())),
-        file_service: Arc::new(FileService::new(db)),
+        file_service: Arc::new(FileService::new(cfg.file.clone(), db)),
     };
 
     tokio::spawn(api::rest::run(ctx, cfg));

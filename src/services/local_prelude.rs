@@ -7,6 +7,8 @@ pub use tokio::sync::RwLock;
 pub use tokio::sync::RwLockReadGuard;
 pub use tokio::sync::RwLockWriteGuard;
 
+pub use anyhow::anyhow;
+
 pub use crate::config::Config;
 
 pub use super::prelude::*;
