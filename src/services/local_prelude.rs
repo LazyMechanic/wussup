@@ -10,5 +10,6 @@ pub use tokio::sync::RwLockWriteGuard;
 pub use anyhow::anyhow;
 
 pub use crate::config::Config;
+pub use crate::repos::prelude::*;
 
 pub use super::prelude::*;

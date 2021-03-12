@@ -1,9 +1,6 @@
-pub mod config;
+use std::sync::Arc;
 
-mod api;
-mod models;
-mod repos;
-mod services;
+use futures::prelude::*;
 
 use crate::api::context::Context;
 use crate::config::Config;
@@ -11,8 +8,12 @@ use crate::services::auth::AuthService;
 use crate::services::file::FileService;
 use crate::services::settings::SettingsService;
 
-use futures::prelude::*;
-use std::sync::Arc;
+pub mod config;
+
+mod api;
+mod models;
+mod repos;
+mod services;
 
 pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let db = repos::connect(&cfg.db).await?;

@@ -43,7 +43,7 @@ fn add_platform(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(middleware::with_context(ctx.clone()))
         .and(middleware::with_auth(ctx))
         .and(warp::body::json())
-        .and_then(handlers::settings::add_platform)
+        .and_then(handlers::settings::create_platform)
         .boxed()
 }
 
@@ -53,7 +53,7 @@ fn add_build(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(middleware::with_context(ctx.clone()))
         .and(middleware::with_auth(ctx))
         .and(warp::body::json())
-        .and_then(handlers::settings::add_build)
+        .and_then(handlers::settings::create_build)
         .boxed()
 }
 

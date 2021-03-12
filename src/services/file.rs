@@ -1,7 +1,7 @@
 use crate::config;
 use crate::models::file::*;
-use crate::repos::prelude::*;
 use crate::services::local_prelude::*;
+use crate::services::utils;
 
 use futures::prelude::*;
 use std::path::Path;
@@ -24,30 +24,49 @@ impl FileService {
         Ok(rows)
     }
 
-    pub async fn has_file<S>(&self, path: S) -> Result<bool, ServiceError>
+    pub async fn has_file<S1, S2, S3>(
+        &self,
+        platform: S1,
+        build: S2,
+        version: S3,
+    ) -> Result<bool, ServiceError>
     where
-        S: AsRef<str>,
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+        S3: AsRef<str>,
     {
-        let has = self.db.file_repo().has_file(path).await?;
-        Ok(has)
+        let has_db = self
+            .db
+            .file_repo()
+            .has_file(&platform, &build, &version)
+            .await?;
+
+        let has_fs = Path::new(&self.cfg.base_path)
+            .join(utils::format_file_name(&platform, &build, &version))
+            .exists();
+
+        Ok(has_db || has_fs)
     }
 
     pub async fn upload<S, B, E>(
         &self,
         mut stream: S,
-        path: String,
+        platform: String,
+        build: String,
+        version: String,
     ) -> Result<Vec<File>, ServiceError>
     where
         S: futures::Stream<Item = Result<B, E>> + Unpin,
         B: bytes::Buf,
         E: std::error::Error + Send + Sync + 'static,
     {
-        if self.has_file(&path).await? {
+        if self.has_file(&platform, &build, &version).await? {
             return Err(ServiceError::CommonError(anyhow!("file exists")));
         }
 
-        let fs_path = Path::new(&self.cfg.base_path).join(&path);
-        let mut file = fs::File::create(fs_path)
+        let fs_path = Path::new(&self.cfg.base_path)
+            .join(utils::format_file_name(&platform, &build, &version));
+        let mut fs_file = fs::File::create(fs_path)
             .await
             .map_err(|err| ServiceError::CommonError(err.into()))?;
 
@@ -59,18 +78,20 @@ impl FileService {
         {
             // While data in buf exists
             while buf.has_remaining() {
-                file.write_buf(&mut buf)
+                fs_file
+                    .write_buf(&mut buf)
                     .await
                     .map_err(|err| ServiceError::CommonError(err.into()))?;
             }
         }
 
         // Save file to repo
-        let f = File {
-            id: Uuid::new_v4(),
-            path,
+        let f = NewFile {
+            platform,
+            build,
+            version,
         };
-        self.db.file_repo().add_file(f).await?;
+        self.db.file_repo().create_file(f).await?;
 
         // Get actual files
         let files = self.db.file_repo().get_files().await?;

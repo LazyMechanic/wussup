@@ -37,16 +37,19 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn get_settings(&self) -> Result<Vec<Settings>, RepoError> {
+    pub async fn get_settings(&self) -> Result<Vec<UpdateSettings>, RepoError> {
         let rows = sqlx::query_as!(
-            Settings,
-            r#"SELECT s.id
-                    , s.platform
-                    , s.build
-                    , s.released_ver
-                    , s.testing_ver
-                    , s.file_path
-               FROM settings as s;"#
+            UpdateSettings,
+            r#"SELECT s.id       as "id!"
+                    , s.platform as "platform!"
+                    , s.build    as "build!"
+                    , fr.version as "released_ver!"
+                    , ft.version as "testing_ver!"
+               FROM settings as s
+               LEFT JOIN files as fr
+                      ON fr.id = s.released_file_id
+               LEFT JOIN files as ft
+                      ON ft.id = s.testing_file_id;"#
         )
         .fetch_all(self.pool)
         .await?;
@@ -54,13 +57,13 @@ impl<'a> SettingsRepo<'a> {
         Ok(rows)
     }
 
-    pub async fn add_platform(&self, p: Platform) -> Result<Platform, RepoError> {
+    pub async fn create_platform(&self, new_platform: NewPlatform) -> Result<Platform, RepoError> {
         let row = sqlx::query_as!(
             Platform,
             r#"INSERT INTO platforms ( name )
                VALUES ( $1 )
                RETURNING name;"#,
-            p.name,
+            new_platform.name,
         )
         .fetch_one(self.pool)
         .await?;
@@ -68,13 +71,13 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn add_build(&self, p: Build) -> Result<Build, RepoError> {
+    pub async fn create_build(&self, new_build: NewBuild) -> Result<Build, RepoError> {
         let row = sqlx::query_as!(
             Build,
             r#"INSERT INTO builds ( name )
                VALUES ( $1 )
                RETURNING name;"#,
-            p.name,
+            new_build.name,
         )
         .fetch_one(self.pool)
         .await?;
@@ -82,13 +85,16 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn delete_platform(&self, name: String) -> Result<Platform, RepoError> {
+    pub async fn delete_platform<S>(&self, name: S) -> Result<Platform, RepoError>
+    where
+        S: AsRef<str>,
+    {
         let row = sqlx::query_as!(
             Platform,
             r#"DELETE FROM platforms as p
                WHERE p.name = $1
                RETURNING name;"#,
-            name,
+            name.as_ref(),
         )
         .fetch_one(self.pool)
         .await?;
@@ -96,13 +102,16 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn delete_build(&self, name: String) -> Result<Build, RepoError> {
+    pub async fn delete_build<S>(&self, name: S) -> Result<Build, RepoError>
+    where
+        S: AsRef<str>,
+    {
         let row = sqlx::query_as!(
             Build,
             r#"DELETE FROM builds as b
                WHERE b.name = $1
                RETURNING name;"#,
-            name,
+            name.as_ref(),
         )
         .fetch_one(self.pool)
         .await?;
@@ -110,9 +119,9 @@ impl<'a> SettingsRepo<'a> {
         Ok(row)
     }
 
-    pub async fn full_update_settings(
+    pub async fn update_settings(
         &self,
-        settings: Vec<Settings>,
+        settings: Vec<NewSettings>,
     ) -> Result<Vec<Settings>, RepoError> {
         let mut tx = self.pool.begin().await?;
 
@@ -128,27 +137,23 @@ impl<'a> SettingsRepo<'a> {
                 r#"INSERT INTO settings ( id
                                         , platform
                                         , build
-                                        , released_ver
-                                        , testing_ver
-                                        , file_path )
+                                        , released_file_id
+                                        , testing_file_id )
                    VALUES ( $1
-                          , $2 
-                          , $3 
-                          , $4 
-                          , $5 
-                          , $6 )
+                          , $2
+                          , $3
+                          , $4
+                          , $5 )
                    RETURNING id
                            , platform
                            , build
-                           , released_ver
-                           , testing_ver
-                           , file_path;"#,
+                           , released_file_id
+                           , testing_file_id;"#,
                 Uuid::new_v4(),
                 s.platform,
                 s.build,
-                s.released_ver,
-                s.testing_ver,
-                s.file_path,
+                s.released_file_id,
+                s.testing_file_id,
             )
             .fetch_one(&mut tx)
             .await?;
@@ -157,6 +162,7 @@ impl<'a> SettingsRepo<'a> {
         }
 
         tx.commit().await?;
+
         Ok(rows)
     }
 }

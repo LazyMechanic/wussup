@@ -10,9 +10,12 @@ create table if not exists settings
     build varchar(128) not null
         constraint settings_builds__fk
             references builds,
-    released_ver varchar(64) not null,
-    testing_ver varchar(64) not null,
-    file_path varchar(256) not null
+    released_file_id uuid not null
+        constraint settings_released_file_ids__fk
+            references files,
+    testing_file_id uuid not null
+        constraint settings_testing_file_ids__fk
+            references files
 );
 
 create unique index if not exists settings_id_uindex

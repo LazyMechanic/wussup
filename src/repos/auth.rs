@@ -12,29 +12,33 @@ impl<'a> AuthRepo<'a> {
         AuthRepo { pool }
     }
 
-    pub async fn add_client(&self, client: Client) -> Result<(), RepoError> {
-        sqlx::query_as!(
+    pub async fn create_client(&self, new_client: NewClient) -> Result<Client, RepoError> {
+        let row = sqlx::query_as!(
             Client,
             r#"INSERT INTO sessions ( refresh_token
-                                  , refresh_token_exp
-                                  , fingerprint
-                                  , client_id )
+                                    , refresh_token_exp
+                                    , fingerprint
+                                    , client_id )
                VALUES ( $1
                       , $2 
                       , $3 
-                      , $4 );"#,
-            client.refresh_token,
-            client.refresh_token_exp,
-            client.fingerprint,
-            client.client_id,
+                      , $4 )
+               RETURNING refresh_token
+                       , refresh_token_exp
+                       , fingerprint
+                       , client_id;"#,
+            new_client.refresh_token,
+            new_client.refresh_token_exp,
+            new_client.fingerprint,
+            new_client.client_id,
         )
-        .execute(self.pool)
+        .fetch_one(self.pool)
         .await?;
 
-        Ok(())
+        Ok(row)
     }
 
-    pub async fn remove_client(&self, refresh_token: Uuid) -> Result<Client, RepoError> {
+    pub async fn delete_client(&self, refresh_token: Uuid) -> Result<Client, RepoError> {
         let row = sqlx::query_as!(
             Client,
             r#"DELETE FROM sessions as s

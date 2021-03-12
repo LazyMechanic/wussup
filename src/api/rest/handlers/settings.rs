@@ -1,109 +1,108 @@
 use crate::api::rest::prelude::*;
 
-pub async fn get_settings(ctx: Context) -> responses::Json {
+pub async fn get_settings(ctx: Context) -> api_models::JsonResponse {
     let settings = ctx
         .settings_service
         .get_settings()
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let settings: api_models::settings::Settings = settings.into();
+    let resp: api_models::settings::GetSettingsResponse = settings.into();
 
-    Ok(responses::settings::GetSettings::new(settings).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn get_platforms(ctx: Context) -> responses::Json {
+pub async fn get_platforms(ctx: Context) -> api_models::JsonResponse {
     let platforms = ctx
         .settings_service
         .get_platforms()
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let platforms = platforms
-        .into_iter()
-        .map(|p| p.name)
-        .collect::<Vec<String>>();
+    let resp: api_models::settings::GetPlatformsResponse = platforms.into();
 
-    Ok(responses::settings::GetPlatforms::new(platforms).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn get_builds(ctx: Context) -> responses::Json {
+pub async fn get_builds(ctx: Context) -> api_models::JsonResponse {
     let builds = ctx
         .settings_service
         .get_builds()
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let builds = builds.into_iter().map(|b| b.name).collect::<Vec<String>>();
+    let resp: api_models::settings::GetBuildsResponse = builds.into();
 
-    Ok(responses::settings::GetBuilds::new(builds).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn add_platform(ctx: Context, req: requests::settings::AddPlatform) -> responses::Json {
-    let r = db_models::settings::Platform { name: req.name };
-
+pub async fn create_platform(
+    ctx: Context,
+    req: api_models::settings::CreatePlatformRequest,
+) -> api_models::JsonResponse {
     let platforms = ctx
         .settings_service
-        .add_platform(r)
+        .create_platform(req.into())
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let res = platforms.into_iter().map(|p| p.name).collect();
+    let resp: api_models::settings::CreatePlatformResponse = platforms.into();
 
-    Ok(responses::settings::AddPlatform::new(res).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn add_build(ctx: Context, req: requests::settings::AddBuild) -> responses::Json {
-    let r = db_models::settings::Build { name: req.name };
-
+pub async fn create_build(
+    ctx: Context,
+    req: api_models::settings::CreateBuildRequest,
+) -> api_models::JsonResponse {
     let builds = ctx
         .settings_service
-        .add_build(r)
+        .create_build(req.into())
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let res = builds.into_iter().map(|p| p.name).collect();
+    let resp: api_models::settings::CreateBuildResponse = builds.into();
 
-    Ok(responses::settings::AddBuild::new(res).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn delete_platform(name: String, ctx: Context) -> responses::Json {
+pub async fn delete_platform(name: String, ctx: Context) -> api_models::JsonResponse {
     let platforms = ctx
         .settings_service
-        .delete_platform(name)
+        .delete_platform(&name)
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let res = platforms.into_iter().map(|p| p.name).collect();
+    let resp: api_models::settings::DeletePlatformResponse = platforms.into();
 
-    Ok(responses::settings::DeletePlatform::new(res).into_json())
+    Ok(resp.into_json())
 }
 
-pub async fn delete_build(name: String, ctx: Context) -> responses::Json {
+pub async fn delete_build(name: String, ctx: Context) -> api_models::JsonResponse {
     let builds = ctx
         .settings_service
-        .delete_build(name)
+        .delete_build(&name)
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let res = builds.into_iter().map(|p| p.name).collect();
+    let resp: api_models::settings::DeleteBuildResponse = builds.into();
 
-    Ok(responses::settings::DeleteBuild::new(res).into_json())
+    Ok(resp.into_json())
 }
 
 pub async fn update_settings(
     ctx: Context,
-    req: requests::settings::UpdateSettings,
-) -> responses::Json {
-    let req_settings = req.payload.into();
+    req: api_models::settings::UpdateSettingsRequest,
+) -> api_models::JsonResponse {
+    let req_settings = req.into();
 
-    let res_settings = ctx
+    let settings = ctx
         .settings_service
         .update_settings(req_settings)
         .await
         .map_err(api_models::Error::err_with_internal_error)?;
 
-    let res_settings = res_settings.into();
+    let resp: api_models::settings::UpdateSettingsResponse = settings.into();
 
-    Ok(responses::settings::UpdateSettings::new(res_settings).into_json())
+    Ok(resp.into_json())
 }

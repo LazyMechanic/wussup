@@ -6,8 +6,8 @@ use crate::services::prelude::*;
 
 pub async fn login(
     ctx: Context,
-    req: requests::auth::Login,
-) -> responses::Custom<impl warp::Reply> {
+    req: api_models::auth::LoginRequest,
+) -> api_models::CustomResponse<impl warp::Reply> {
     log::debug!("login, req={:?}", req);
 
     let (access_token, refresh_token) = ctx
@@ -20,7 +20,7 @@ pub async fn login(
         .encode()
         .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
-    let reply = warp::reply::json(&responses::auth::Login { access_token });
+    let reply = api_models::auth::LoginResponse { access_token }.into_json();
     let reply = reply_with_cookie(reply, refresh_token)?;
 
     Ok(reply)
@@ -29,8 +29,8 @@ pub async fn login(
 pub async fn refresh_tokens(
     ctx: Context,
     jwt: Jwt,
-    req: requests::auth::RefreshTokens,
-) -> responses::Custom<impl warp::Reply> {
+    req: api_models::auth::RefreshTokensRequest,
+) -> api_models::CustomResponse<impl warp::Reply> {
     log::debug!("refresh tokens, jwt={:?}, req={:?}", jwt, req);
 
     let (access_token, refresh_token) = ctx
@@ -43,7 +43,7 @@ pub async fn refresh_tokens(
         .encode()
         .map_err(|err| api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
-    let reply = warp::reply::json(&responses::auth::RefreshTokens { access_token });
+    let reply = api_models::auth::RefreshTokensResponse { access_token }.into_json();
     let reply = reply_with_cookie(reply, refresh_token)?;
 
     Ok(reply)
@@ -73,7 +73,7 @@ fn reply_with_cookie(
     Ok(r)
 }
 
-pub async fn logout(ctx: Context, jwt: Jwt) -> responses::Empty {
+pub async fn logout(ctx: Context, jwt: Jwt) -> api_models::EmptyResponse {
     log::debug!("logout, jwt={:?}", jwt);
 
     ctx.auth_service

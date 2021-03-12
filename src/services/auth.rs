@@ -5,8 +5,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::config;
-use crate::models;
-use crate::repos::prelude::*;
+use crate::models::auth::NewClient;
 use crate::services::utils;
 
 use super::local_prelude::*;
@@ -66,12 +65,15 @@ impl AuthService {
         }
 
         // Create new client
-        let client = models::auth::Client::new(
-            Uuid::new_v4(),
-            utils::expires_timestamp(self.cfg.refresh_expires),
-            fingerprint,
-            Uuid::new_v4(),
-        );
+        let client = NewClient {
+            refresh_token: Uuid::new_v4(),
+            refresh_token_exp: utils::expires_timestamp(self.cfg.refresh_expires),
+            client_id: Uuid::new_v4(),
+            fingerprint: fingerprint.into(),
+        };
+
+        // Save new auth session
+        let client = self.db.auth_repo().create_client(client).await?;
 
         // Create access token
         let access_token = AccessTokenDecoded::new(
@@ -85,9 +87,6 @@ impl AuthService {
             token: client.refresh_token,
             exp: client.refresh_token_exp,
         };
-
-        // Save new auth session
-        self.db.auth_repo().add_client(client).await?;
 
         Ok((access_token, refresh_token))
     }
@@ -106,7 +105,7 @@ impl AuthService {
         let old_client = self
             .db
             .auth_repo()
-            .remove_client(jwt.refresh_token.token)
+            .delete_client(jwt.refresh_token.token)
             .await?;
 
         // If refresh token expires
@@ -124,12 +123,15 @@ impl AuthService {
         }
 
         // Create new client
-        let new_client = models::auth::Client::new(
-            Uuid::new_v4(),
-            utils::expires_timestamp(self.cfg.refresh_expires),
+        let new_client = NewClient {
+            refresh_token: Uuid::new_v4(),
+            refresh_token_exp: utils::expires_timestamp(self.cfg.refresh_expires),
+            client_id: old_client.client_id,
             fingerprint,
-            old_client.client_id,
-        );
+        };
+
+        // Save new auth session
+        let new_client = self.db.auth_repo().create_client(new_client).await?;
 
         // Create new access token
         let new_access_token = AccessTokenDecoded::new(
@@ -143,9 +145,6 @@ impl AuthService {
             token: new_client.refresh_token,
             exp: new_client.refresh_token_exp,
         };
-
-        // Save new auth session
-        self.db.auth_repo().add_client(new_client).await?;
 
         Ok((new_access_token, new_refresh_token))
     }
@@ -168,7 +167,7 @@ impl AuthService {
         // Delete auth session
         self.db
             .auth_repo()
-            .remove_client(jwt.refresh_token.token)
+            .delete_client(jwt.refresh_token.token)
             .await?;
 
         Ok(())

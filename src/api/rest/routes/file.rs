@@ -15,7 +15,7 @@ fn get_files(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
 }
 
 fn upload(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
-    warp::path!("v1" / "files" / "upload" / String)
+    warp::path!("v1" / "files" / String / String / String)
         .and(warp::post())
         .and(middleware::with_context(ctx.clone()))
         .and(middleware::with_auth(ctx))

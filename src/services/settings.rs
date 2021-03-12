@@ -1,5 +1,4 @@
 use crate::models::settings::*;
-use crate::repos::prelude::*;
 use crate::services::local_prelude::*;
 
 pub struct SettingsService {
@@ -21,30 +20,39 @@ impl SettingsService {
         Ok(rows)
     }
 
-    pub async fn get_settings(&self) -> Result<Vec<Settings>, ServiceError> {
+    pub async fn get_settings(&self) -> Result<Vec<UpdateSettings>, ServiceError> {
         let rows = self.db.settings_repo().get_settings().await?;
         Ok(rows)
     }
 
-    pub async fn add_platform(&self, platform: Platform) -> Result<Vec<Platform>, ServiceError> {
-        self.db.settings_repo().add_platform(platform).await?;
+    pub async fn create_platform(
+        &self,
+        platform: NewPlatform,
+    ) -> Result<Vec<Platform>, ServiceError> {
+        self.db.settings_repo().create_platform(platform).await?;
         let rows = self.db.settings_repo().get_platforms().await?;
         Ok(rows)
     }
 
-    pub async fn add_build(&self, build: Build) -> Result<Vec<Build>, ServiceError> {
-        self.db.settings_repo().add_build(build).await?;
+    pub async fn create_build(&self, build: NewBuild) -> Result<Vec<Build>, ServiceError> {
+        self.db.settings_repo().create_build(build).await?;
         let rows = self.db.settings_repo().get_builds().await?;
         Ok(rows)
     }
 
-    pub async fn delete_platform(&self, name: String) -> Result<Vec<Platform>, ServiceError> {
+    pub async fn delete_platform<S>(&self, name: S) -> Result<Vec<Platform>, ServiceError>
+    where
+        S: AsRef<str>,
+    {
         self.db.settings_repo().delete_platform(name).await?;
         let rows = self.db.settings_repo().get_platforms().await?;
         Ok(rows)
     }
 
-    pub async fn delete_build(&self, name: String) -> Result<Vec<Build>, ServiceError> {
+    pub async fn delete_build<S>(&self, name: S) -> Result<Vec<Build>, ServiceError>
+    where
+        S: AsRef<str>,
+    {
         self.db.settings_repo().delete_build(name).await?;
         let rows = self.db.settings_repo().get_builds().await?;
         Ok(rows)
@@ -52,13 +60,9 @@ impl SettingsService {
 
     pub async fn update_settings(
         &self,
-        settings: Vec<Settings>,
+        settings: Vec<NewSettings>,
     ) -> Result<Vec<Settings>, ServiceError> {
-        let rows = self
-            .db
-            .settings_repo()
-            .full_update_settings(settings)
-            .await?;
+        let rows = self.db.settings_repo().update_settings(settings).await?;
         Ok(rows)
     }
 }
