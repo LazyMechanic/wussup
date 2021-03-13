@@ -15,7 +15,8 @@ create table if not exists settings
             references files,
     testing_file_id uuid not null
         constraint settings_testing_file_ids__fk
-            references files
+            references files,
+    unique(platform, build)
 );
 
 create unique index if not exists settings_id_uindex
