@@ -1,4 +1,5 @@
 use crate::api::rest::prelude::*;
+use uuid::Uuid;
 
 pub async fn get_files(ctx: Context) -> api_models::JsonResponse {
     let files = ctx
@@ -50,6 +51,21 @@ pub async fn download(
     let resp = warp::reply::Response::new(body);
 
     Ok(resp)
+}
 
-    //Ok(warp::reply())
+pub async fn delete(
+    platform: String,
+    build: String,
+    version: String,
+    ctx: Context,
+) -> api_models::JsonResponse {
+    let files = ctx
+        .file_service
+        .delete(platform, build, version)
+        .await
+        .map_err(api_models::Error::err_with_internal_error)?;
+
+    let resp: api_models::file::DeleteFileResponse = files.into();
+
+    Ok(resp.into_json())
 }

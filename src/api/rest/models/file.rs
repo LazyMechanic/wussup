@@ -62,3 +62,16 @@ impl From<Vec<db_models::file::File>> for UploadFileResponse {
         }
     }
 }
+
+#[derive(serde::Serialize, Debug)]
+pub struct DeleteFileResponse {
+    pub files: Vec<File>,
+}
+
+impl From<Vec<db_models::file::File>> for DeleteFileResponse {
+    fn from(f: Vec<db_models::file::File>) -> Self {
+        Self {
+            files: f.into_iter().map(|f| f.into()).collect(),
+        }
+    }
+}

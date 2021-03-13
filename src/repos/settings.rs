@@ -165,4 +165,18 @@ impl<'a> SettingsRepo<'a> {
 
         Ok(rows)
     }
+
+    pub async fn has_file(&self, file_id: Uuid) -> Result<bool, RepoError> {
+        let row = sqlx::query!(
+            r#"SELECT count(1) as "count!"
+               FROM settings as s
+               WHERE s.released_file_id = $1
+                  OR s.testing_file_id = $1;"#,
+            file_id
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row.count > 0)
+    }
 }

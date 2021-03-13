@@ -27,6 +27,54 @@ impl<'a> FileRepo<'a> {
         Ok(rows)
     }
 
+    pub async fn get_file(&self, id: Uuid) -> Result<File, RepoError> {
+        let row = sqlx::query_as!(
+            File,
+            r#"SELECT f.id
+                    , f.platform
+                    , f.build
+                    , f.version
+               FROM files as f
+               WHERE f.id = $1;"#,
+            id,
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    pub async fn find_file<S1, S2, S3>(
+        &self,
+        platform: S1,
+        build: S2,
+        version: S3,
+    ) -> Result<Option<File>, RepoError>
+    where
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+        S3: AsRef<str>,
+    {
+        let row = sqlx::query_as!(
+            File,
+            r#"SELECT f.id
+                    , f.platform
+                    , f.build
+                    , f.version
+               FROM files as f
+               WHERE f.platform = $1
+                 AND f.build = $2
+                 AND f.version = $3;"#,
+            platform.as_ref(),
+            build.as_ref(),
+            version.as_ref(),
+        )
+        .fetch_optional(self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     pub async fn create_file(&self, new_file: NewFile) -> Result<File, RepoError> {
         let row = sqlx::query_as!(
             File,
@@ -46,6 +94,23 @@ impl<'a> FileRepo<'a> {
             new_file.platform,
             new_file.build,
             new_file.version
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    pub async fn delete_file(&self, id: Uuid) -> Result<File, RepoError> {
+        let row = sqlx::query_as!(
+            File,
+            r#"DELETE FROM files as f
+               WHERE f.id = $1
+               RETURNING id
+                       , platform
+                       , build
+                       , version;"#,
+            id,
         )
         .fetch_one(self.pool)
         .await?;

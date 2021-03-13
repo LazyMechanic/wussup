@@ -24,7 +24,30 @@ impl FileService {
         Ok(rows)
     }
 
-    pub async fn has_file<S1, S2, S3>(
+    pub async fn get_file(&self, id: Uuid) -> Result<File, ServiceError> {
+        let row = self.db.file_repo().get_file(id).await?;
+        Ok(row)
+    }
+
+    fn has_fs_file<S1, S2, S3>(
+        &self,
+        platform: S1,
+        build: S2,
+        version: S3,
+    ) -> Result<bool, ServiceError>
+    where
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+        S3: AsRef<str>,
+    {
+        let has_fs = Path::new(&self.cfg.base_path)
+            .join(utils::format_file_name(&platform, &build, &version))
+            .exists();
+
+        Ok(has_fs)
+    }
+
+    async fn has_repo_file<S1, S2, S3>(
         &self,
         platform: S1,
         build: S2,
@@ -41,9 +64,23 @@ impl FileService {
             .has_file(&platform, &build, &version)
             .await?;
 
-        let has_fs = Path::new(&self.cfg.base_path)
-            .join(utils::format_file_name(&platform, &build, &version))
-            .exists();
+        Ok(has_db)
+    }
+
+    pub async fn has_file<S1, S2, S3>(
+        &self,
+        platform: S1,
+        build: S2,
+        version: S3,
+    ) -> Result<bool, ServiceError>
+    where
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+        S3: AsRef<str>,
+    {
+        let has_db = self.has_repo_file(&platform, &build, &version).await?;
+
+        let has_fs = self.has_fs_file(&platform, &build, &version)?;
 
         Ok(has_db || has_fs)
     }
@@ -120,5 +157,45 @@ impl FileService {
             tokio_util::codec::FramedRead::new(fs_file, tokio_util::codec::BytesCodec::new());
 
         Ok(codec)
+    }
+
+    pub async fn delete(
+        &self,
+        platform: String,
+        build: String,
+        version: String,
+    ) -> Result<Vec<File>, ServiceError> {
+        if !self.has_file(&platform, &build, &version).await? {
+            return Err(ServiceError::CommonError(anyhow!("file not exists")));
+        }
+
+        // Unwrap, because already check
+        let file = self
+            .db
+            .file_repo()
+            .find_file(&platform, &build, &version)
+            .await?
+            .unwrap();
+
+        // Check if file using in settings
+        if self.db.settings_repo().has_file(file.id).await? {
+            return Err(ServiceError::CommonError(anyhow!(
+                "file using in settings, update it before deleting file"
+            )));
+        }
+
+        let fs_path = Path::new(&self.cfg.base_path)
+            .join(utils::format_file_name(&platform, &build, &version));
+
+        // Delete file from fs
+        std::fs::remove_file(fs_path).map_err(|err| ServiceError::CommonError(err.into()))?;
+
+        // Delete file from repo
+        self.db.file_repo().delete_file(file.id).await?;
+
+        // Get actual files
+        let files = self.db.file_repo().get_files().await?;
+
+        Ok(files)
     }
 }
