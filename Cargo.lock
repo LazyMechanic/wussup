@@ -2461,6 +2461,7 @@ dependencies = [
  "futures",
  "http",
  "http-api-problem",
+ "hyper",
  "jsonwebtoken",
  "log",
  "log4rs",
@@ -2471,6 +2472,7 @@ dependencies = [
  "thiserror",
  "time 0.2.25",
  "tokio",
+ "tokio-util",
  "uuid",
  "warp",
 ]

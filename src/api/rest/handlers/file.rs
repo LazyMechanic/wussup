@@ -33,3 +33,23 @@ where
 
     Ok(resp.into_json())
 }
+
+pub async fn download(
+    platform: String,
+    build: String,
+    version: String,
+    ctx: Context,
+) -> api_models::CustomResponse<impl warp::Reply> {
+    let file = ctx
+        .file_service
+        .download(platform, build, version)
+        .await
+        .map_err(api_models::Error::err_with_internal_error)?;
+
+    let body = hyper::Body::wrap_stream(file);
+    let resp = warp::reply::Response::new(body);
+
+    Ok(resp)
+
+    //Ok(warp::reply())
+}

@@ -98,4 +98,27 @@ impl FileService {
 
         Ok(files)
     }
+
+    pub async fn download(
+        &self,
+        platform: String,
+        build: String,
+        version: String,
+    ) -> Result<impl futures::Stream<Item = Result<bytes::BytesMut, std::io::Error>>, ServiceError>
+    {
+        if !self.has_file(&platform, &build, &version).await? {
+            return Err(ServiceError::CommonError(anyhow!("file not exists")));
+        }
+
+        let fs_path = Path::new(&self.cfg.base_path)
+            .join(utils::format_file_name(&platform, &build, &version));
+        let fs_file = fs::File::open(fs_path)
+            .await
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
+
+        let codec =
+            tokio_util::codec::FramedRead::new(fs_file, tokio_util::codec::BytesCodec::new());
+
+        Ok(codec)
+    }
 }

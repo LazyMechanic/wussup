@@ -2,7 +2,10 @@ use super::middleware;
 use crate::api::rest::prelude::*;
 
 pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
-    get_files(ctx.clone()).or(upload(ctx)).boxed()
+    get_files(ctx.clone())
+        .or(upload(ctx.clone()))
+        .or(download(ctx))
+        .boxed()
 }
 
 fn get_files(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
@@ -21,5 +24,13 @@ fn upload(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(middleware::with_auth(ctx))
         .and(warp::body::stream())
         .and_then(handlers::file::upload)
+        .boxed()
+}
+
+fn download(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
+    warp::path!("v1" / "files" / String / String / String)
+        .and(warp::get())
+        .and(middleware::with_context(ctx))
+        .and_then(handlers::file::download)
         .boxed()
 }
